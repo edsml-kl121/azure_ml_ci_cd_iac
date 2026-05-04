@@ -35,6 +35,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' = {
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
     enableRbacAuthorization: false   // AML manages its own access policies internally
+    accessPolicies: []               // AML appends its own policy at workspace creation
   }
 }
 

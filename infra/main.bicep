@@ -62,7 +62,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 }
 
 // ── Azure ML Workspace ────────────────────────────────────────────────────────
-resource workspace 'Microsoft.MachineLearningServices/workspaces@2023-10-01' = {
+resource workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
   name: workspaceName
   location: location
   identity: { type: 'SystemAssigned' }

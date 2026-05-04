@@ -36,6 +36,17 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ── 1. Infrastructure ──────────────────────────────────────────────────
+      - name: Wait for any in-progress workspace deletion
+        run: |
+          WS=amlworkshop-dev-workspace
+          RG=${{ env.RESOURCE_GROUP }}
+          for i in $(seq 1 20); do
+            STATE=$(az ml workspace show -n "$WS" -g "$RG" --query provisioningState -o tsv 2>/dev/null || echo "Deleted")
+            echo "Workspace state: $STATE"
+            [ "$STATE" = "Deleting" ] || break
+            sleep 30
+          done
+
       - name: Deploy Dev infrastructure (Bicep)
         id: infra
         run: |
@@ -124,6 +135,17 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ── 1. Infrastructure ──────────────────────────────────────────────────
+      - name: Wait for any in-progress workspace deletion
+        run: |
+          WS=amlworkshop-prod-workspace
+          RG=${{ env.RESOURCE_GROUP }}
+          for i in $(seq 1 20); do
+            STATE=$(az ml workspace show -n "$WS" -g "$RG" --query provisioningState -o tsv 2>/dev/null || echo "Deleted")
+            echo "Workspace state: $STATE"
+            [ "$STATE" = "Deleting" ] || break
+            sleep 30
+          done
+
       - name: Deploy Prod infrastructure (Bicep)
         id: infra
         run: |

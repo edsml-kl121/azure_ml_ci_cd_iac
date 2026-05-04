@@ -72,6 +72,7 @@ resource workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
     applicationInsights:       appInsights.id
     containerRegistry:         containerRegistry.id
     publicNetworkAccess:       'Enabled'
+    #disable-next-line BCP037
     systemDatastoresAuthMode:  'identity'   // use managed identity, not storage keys
   }
 }

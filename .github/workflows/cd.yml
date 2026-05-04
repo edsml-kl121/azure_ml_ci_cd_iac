@@ -61,15 +61,23 @@ jobs:
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
         run: |
-          grant() {
-            az role assignment create \
-              --assignee-object-id "$1" --assignee-principal-type ServicePrincipal \
-              --role "$2" --scope "$3" 2>&1 | grep -qE 'roleDefinitionId|RoleAssignmentExists'
-          }
           P=${{ steps.infra.outputs.principalId }}
-          grant "$P" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
-          grant "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
-          grant "$P" b86a8fe4-44ce-4948-aee5-eccb2c155cd7 ${{ steps.infra.outputs.kvId }}
+          for ROLE in ba92f5b4-2d11-453d-a403-e96b0029c9fe \
+                      8311e382-0749-4cb8-b61a-304f252e45ec \
+                      b86a8fe4-44ce-4948-aee5-eccb2c155cd7; do
+            SCOPE=$([ "$ROLE" = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" ] && \
+                    echo "${{ steps.infra.outputs.storageId }}" || \
+                    ([ "$ROLE" = "8311e382-0749-4cb8-b61a-304f252e45ec" ] && \
+                    echo "${{ steps.infra.outputs.acrId }}" || \
+                    echo "${{ steps.infra.outputs.kvId }}"))
+            az role assignment create \
+              --assignee-object-id "$P" \
+              --assignee-principal-type ServicePrincipal \
+              --role "$ROLE" --scope "$SCOPE" \
+              --skip-assignment-exists-error
+          done
+          echo "Waiting 60s for RBAC propagation..."
+          sleep 60
 
       # ── 2. ML pipeline (train + register model) ────────────────────────────
       - uses: actions/setup-python@v5
@@ -146,15 +154,23 @@ jobs:
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
         run: |
-          grant() {
-            az role assignment create \
-              --assignee-object-id "$1" --assignee-principal-type ServicePrincipal \
-              --role "$2" --scope "$3" 2>&1 | grep -qE 'roleDefinitionId|RoleAssignmentExists'
-          }
           P=${{ steps.infra.outputs.principalId }}
-          grant "$P" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
-          grant "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
-          grant "$P" b86a8fe4-44ce-4948-aee5-eccb2c155cd7 ${{ steps.infra.outputs.kvId }}
+          for ROLE in ba92f5b4-2d11-453d-a403-e96b0029c9fe \
+                      8311e382-0749-4cb8-b61a-304f252e45ec \
+                      b86a8fe4-44ce-4948-aee5-eccb2c155cd7; do
+            SCOPE=$([ "$ROLE" = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" ] && \
+                    echo "${{ steps.infra.outputs.storageId }}" || \
+                    ([ "$ROLE" = "8311e382-0749-4cb8-b61a-304f252e45ec" ] && \
+                    echo "${{ steps.infra.outputs.acrId }}" || \
+                    echo "${{ steps.infra.outputs.kvId }}"))
+            az role assignment create \
+              --assignee-object-id "$P" \
+              --assignee-principal-type ServicePrincipal \
+              --role "$ROLE" --scope "$SCOPE" \
+              --skip-assignment-exists-error
+          done
+          echo "Waiting 60s for RBAC propagation..."
+          sleep 60
 
       # ── 2. ML pipeline (train + register model in Prod workspace) ──────────
       - uses: actions/setup-python@v5

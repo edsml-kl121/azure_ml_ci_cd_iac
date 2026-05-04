@@ -61,21 +61,17 @@ jobs:
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
         run: |
-          P=${{ steps.infra.outputs.principalId }}
-          for ROLE in ba92f5b4-2d11-453d-a403-e96b0029c9fe \
-                      8311e382-0749-4cb8-b61a-304f252e45ec \
-                      b86a8fe4-44ce-4948-aee5-eccb2c155cd7; do
-            SCOPE=$([ "$ROLE" = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" ] && \
-                    echo "${{ steps.infra.outputs.storageId }}" || \
-                    ([ "$ROLE" = "8311e382-0749-4cb8-b61a-304f252e45ec" ] && \
-                    echo "${{ steps.infra.outputs.acrId }}" || \
-                    echo "${{ steps.infra.outputs.kvId }}"))
-            az role assignment create \
-              --assignee-object-id "$P" \
+          assign() {
+            OUT=$(az role assignment create \
+              --assignee-object-id "$1" \
               --assignee-principal-type ServicePrincipal \
-              --role "$ROLE" --scope "$SCOPE" \
-              --skip-assignment-exists-error
-          done
+              --role "$2" --scope "$3" 2>&1) || \
+            echo "$OUT" | grep -q 'RoleAssignmentExists' || { echo "$OUT"; exit 1; }
+          }
+          P=${{ steps.infra.outputs.principalId }}
+          assign "$P" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
+          assign "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
+          assign "$P" b86a8fe4-44ce-4948-aee5-eccb2c155cd7 ${{ steps.infra.outputs.kvId }}
           echo "Waiting 60s for RBAC propagation..."
           sleep 60
 
@@ -154,21 +150,17 @@ jobs:
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
         run: |
-          P=${{ steps.infra.outputs.principalId }}
-          for ROLE in ba92f5b4-2d11-453d-a403-e96b0029c9fe \
-                      8311e382-0749-4cb8-b61a-304f252e45ec \
-                      b86a8fe4-44ce-4948-aee5-eccb2c155cd7; do
-            SCOPE=$([ "$ROLE" = "ba92f5b4-2d11-453d-a403-e96b0029c9fe" ] && \
-                    echo "${{ steps.infra.outputs.storageId }}" || \
-                    ([ "$ROLE" = "8311e382-0749-4cb8-b61a-304f252e45ec" ] && \
-                    echo "${{ steps.infra.outputs.acrId }}" || \
-                    echo "${{ steps.infra.outputs.kvId }}"))
-            az role assignment create \
-              --assignee-object-id "$P" \
+          assign() {
+            OUT=$(az role assignment create \
+              --assignee-object-id "$1" \
               --assignee-principal-type ServicePrincipal \
-              --role "$ROLE" --scope "$SCOPE" \
-              --skip-assignment-exists-error
-          done
+              --role "$2" --scope "$3" 2>&1) || \
+            echo "$OUT" | grep -q 'RoleAssignmentExists' || { echo "$OUT"; exit 1; }
+          }
+          P=${{ steps.infra.outputs.principalId }}
+          assign "$P" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
+          assign "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
+          assign "$P" b86a8fe4-44ce-4948-aee5-eccb2c155cd7 ${{ steps.infra.outputs.kvId }}
           echo "Waiting 60s for RBAC propagation..."
           sleep 60
 

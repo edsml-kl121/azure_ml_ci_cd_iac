@@ -1,0 +1,24 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+name: data_prep
+display_name: Data Preparation
+version: 1
+type: command
+
+inputs: {}   # data comes from sklearn, no external input needed
+
+outputs:
+  train_data:
+    type: uri_folder
+  test_data:
+    type: uri_folder
+
+# code: . uploads everything in this directory to the job
+code: .
+command: >-
+  python data_prep.py
+  --train-output ${{outputs.train_data}}
+  --test-output  ${{outputs.test_data}}
+
+environment:
+  image: mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest
+  conda_file: ../conda.yml

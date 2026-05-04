@@ -1,0 +1,148 @@
+name: CD – Dev → Production
+
+# Runs on every push to main (after a PR is merged).
+# Dev deploys automatically; Production is gated by manual approval
+# configured on the GitHub "production" Environment.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  id-token: write   # required for OIDC login
+  contents: read
+
+env:
+  LOCATION: eastus
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 1 – Deploy to Dev  (no approval gate)
+# ─────────────────────────────────────────────────────────────────────────────
+jobs:
+  deploy-dev:
+    name: Deploy to Dev
+    runs-on: ubuntu-latest
+    env:
+      RESOURCE_GROUP: rg-aml-dev
+    outputs:
+      workspace_name: ${{ steps.infra.outputs.workspaceName }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ── 1. Infrastructure ──────────────────────────────────────────────────
+      - name: Deploy Dev infrastructure (Bicep)
+        id: infra
+        run: |
+          az group create \
+            --name     ${{ env.RESOURCE_GROUP }} \
+            --location ${{ env.LOCATION }} \
+            --tags     env=dev \
+            --output none
+
+          OUTPUT=$(az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file  infra/main.bicep \
+            --parameters     infra/dev.bicepparam \
+            --query          "properties.outputs" \
+            --output         json)
+
+          echo "workspaceName=$(echo "$OUTPUT" | jq -r '.workspaceName.value')" >> "$GITHUB_OUTPUT"
+
+      # ── 2. ML pipeline (train + register model) ────────────────────────────
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run AML pipeline – train & register model
+        run: |
+          python src/pipeline/pipeline.py \
+            --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --resource-group  ${{ env.RESOURCE_GROUP }} \
+            --workspace-name  ${{ steps.infra.outputs.workspaceName }}
+
+      # ── 3. Deploy model to Dev endpoint ───────────────────────────────────
+      - name: Deploy model to Dev managed endpoint
+        run: |
+          python src/pipeline/deploy.py \
+            --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --resource-group  ${{ env.RESOURCE_GROUP }} \
+            --workspace-name  ${{ steps.infra.outputs.workspaceName }} \
+            --endpoint-name   diabetes-endpoint-dev
+
+# ─────────────────────────────────────────────────────────────────────────────
+# JOB 2 – Deploy to Production  (GATED – requires manual approval)
+#
+# Set up the gate:
+#   GitHub repo → Settings → Environments → production
+#   → Enable "Required reviewers" and add approvers.
+# ─────────────────────────────────────────────────────────────────────────────
+  deploy-prod:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: deploy-dev
+    environment: production        # ← workflow pauses here until approved
+    env:
+      RESOURCE_GROUP: rg-aml-prod
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # ── 1. Infrastructure ──────────────────────────────────────────────────
+      - name: Deploy Prod infrastructure (Bicep)
+        id: infra
+        run: |
+          az group create \
+            --name     ${{ env.RESOURCE_GROUP }} \
+            --location ${{ env.LOCATION }} \
+            --tags     env=prod \
+            --output none
+
+          OUTPUT=$(az deployment group create \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --template-file  infra/main.bicep \
+            --parameters     infra/prod.bicepparam \
+            --query          "properties.outputs" \
+            --output         json)
+
+          echo "workspaceName=$(echo "$OUTPUT" | jq -r '.workspaceName.value')" >> "$GITHUB_OUTPUT"
+
+      # ── 2. ML pipeline (train + register model in Prod workspace) ──────────
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: pip
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run AML pipeline – train & register model
+        run: |
+          python src/pipeline/pipeline.py \
+            --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --resource-group  ${{ env.RESOURCE_GROUP }} \
+            --workspace-name  ${{ steps.infra.outputs.workspaceName }}
+
+      # ── 3. Deploy model to Prod endpoint ───────────────────────────────────
+      - name: Deploy model to Prod managed endpoint
+        run: |
+          python src/pipeline/deploy.py \
+            --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --resource-group  ${{ env.RESOURCE_GROUP }} \
+            --workspace-name  ${{ steps.infra.outputs.workspaceName }} \
+            --endpoint-name   diabetes-endpoint-prod

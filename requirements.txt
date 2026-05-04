@@ -1,0 +1,10 @@
+# Azure ML SDK v2
+azure-ai-ml>=1.15.0
+azure-identity>=1.15.0
+
+# ML / data
+scikit-learn>=1.4.0
+pandas>=2.2.0
+numpy>=1.26.0
+mlflow>=2.13.0
+joblib>=1.4.0

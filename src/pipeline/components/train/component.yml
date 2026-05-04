@@ -1,0 +1,26 @@
+$schema: https://azuremlschemas.azureedge.net/latest/commandComponent.schema.json
+name: train
+display_name: Train Classifier
+version: 1
+type: command
+
+inputs:
+  train_data:
+    type: uri_folder
+  test_data:
+    type: uri_folder
+
+outputs:
+  model_output:
+    type: mlflow_model
+
+code: .
+command: >-
+  python train.py
+  --train-data   ${{inputs.train_data}}
+  --test-data    ${{inputs.test_data}}
+  --model-output ${{outputs.model_output}}
+
+environment:
+  image: mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest
+  conda_file: ../conda.yml

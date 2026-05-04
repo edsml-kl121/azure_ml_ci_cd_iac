@@ -74,6 +74,32 @@ jobs:
           echo "Waiting 90s for RBAC propagation..."
           sleep 90
 
+      # ── 1c. Patch default datastores to credential-less (managed identity) ──
+      - name: Switch default datastores to managed identity auth
+        run: |
+          WS=${{ steps.infra.outputs.workspaceName }}
+          RG=${{ env.RESOURCE_GROUP }}
+
+          for DS in workspaceblobstore workspacefilestore; do
+            INFO=$(az ml datastore show --name "$DS" -g "$RG" -w "$WS" 2>/dev/null) || continue
+            ACCT=$(echo "$INFO" | jq -r '.account_name')
+            CTR=$(echo  "$INFO" | jq -r '.container_name // .file_share_name')
+            TYPE=$(echo "$INFO" | jq -r '.type')         # azure_blob | azure_file
+
+            cat > /tmp/ds.yml <<YAML
+\$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json
+name: $DS
+type: $TYPE
+account_name: $ACCT
+container_name: $CTR
+credentials:
+  type: none
+YAML
+
+            az ml datastore create --file /tmp/ds.yml -g "$RG" -w "$WS" --update-if-exists
+            echo "$DS patched to managed-identity auth"
+          done
+
       # ── 2. ML pipeline (train + register model) ────────────────────────────
       - uses: actions/setup-python@v5
         with:
@@ -161,6 +187,32 @@ jobs:
           assign "$P" 7f951dda-4ed3-4680-a7ca-43fe172d538d ${{ steps.infra.outputs.acrId }}
           echo "Waiting 90s for RBAC propagation..."
           sleep 90
+
+      # ── 1c. Patch default datastores to credential-less (managed identity) ──
+      - name: Switch default datastores to managed identity auth
+        run: |
+          WS=${{ steps.infra.outputs.workspaceName }}
+          RG=${{ env.RESOURCE_GROUP }}
+
+          for DS in workspaceblobstore workspacefilestore; do
+            INFO=$(az ml datastore show --name "$DS" -g "$RG" -w "$WS" 2>/dev/null) || continue
+            ACCT=$(echo "$INFO" | jq -r '.account_name')
+            CTR=$(echo  "$INFO" | jq -r '.container_name // .file_share_name')
+            TYPE=$(echo "$INFO" | jq -r '.type')
+
+            cat > /tmp/ds.yml <<YAML
+\$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json
+name: $DS
+type: $TYPE
+account_name: $ACCT
+container_name: $CTR
+credentials:
+  type: none
+YAML
+
+            az ml datastore create --file /tmp/ds.yml -g "$RG" -w "$WS" --update-if-exists
+            echo "$DS patched to managed-identity auth"
+          done
 
       # ── 2. ML pipeline (train + register model in Prod workspace) ──────────
       - uses: actions/setup-python@v5

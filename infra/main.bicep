@@ -73,49 +73,10 @@ resource workspace 'Microsoft.MachineLearningServices/workspaces@2023-10-01' = {
   }
 }
 
-// ── Role assignments for workspace managed identity ───────────────────────────
-// Storage Blob Data Contributor — read/write job artifacts
-resource storageRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(storage.id, workspace.id, 'StorageBlobDataContributor')
-  scope: storage
-  properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      'ba92f5b4-2d11-453d-a403-e96b0029c9fe'
-    )
-    principalId:   workspace.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// AcrPush — build and push custom environment images
-resource acrRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(containerRegistry.id, workspace.id, 'AcrPush')
-  scope: containerRegistry
-  properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      '8311e382-0749-4cb8-b61a-304f252e45ec'
-    )
-    principalId:   workspace.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
-// Key Vault Secrets Officer — store connections and credentials
-resource kvRole 'Microsoft.Authorization/roleAssignments@2022-04-01' = {
-  name: guid(keyVault.id, workspace.id, 'KeyVaultSecretsOfficer')
-  scope: keyVault
-  properties: {
-    roleDefinitionId: subscriptionResourceId(
-      'Microsoft.Authorization/roleDefinitions',
-      'b86a8fe4-44ce-4948-aee5-eccb2c155cd7'
-    )
-    principalId:   workspace.identity.principalId
-    principalType: 'ServicePrincipal'
-  }
-}
-
 // ── Outputs ───────────────────────────────────────────────────────────────────
-output workspaceName     string = workspace.name
-output storageAccountName string = storage.name
+output workspaceName        string = workspace.name
+output storageAccountName   string = storage.name
+output workspacePrincipalId string = workspace.identity.principalId
+output storageId            string = storage.id
+output acrId                string = containerRegistry.id
+output kvId                 string = keyVault.id

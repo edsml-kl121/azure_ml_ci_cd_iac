@@ -10,7 +10,7 @@ var storageAccountName    = 'amlworkshop${environmentName}st${substring(suffix, 
 var keyVaultName          = 'kv-${environmentName}-${substring(suffix, 0, 10)}'
 var appInsightsName       = 'amlworkshop-${environmentName}-appi'
 var containerRegistryName = 'amlworkshop${environmentName}cr${substring(suffix, 0, 8)}'
-var workspaceName         = 'amlworkshop-${environmentName}-workspace'
+var workspaceName         = 'amlws-${environmentName}-${substring(suffix, 0, 8)}'
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {

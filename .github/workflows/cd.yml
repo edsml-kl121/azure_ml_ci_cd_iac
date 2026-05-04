@@ -71,6 +71,7 @@ jobs:
           P=${{ steps.infra.outputs.principalId }}
           assign "$P" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
           assign "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
+          assign "$P" 7f951dda-4ed3-4680-a7ca-43fe172d538d ${{ steps.infra.outputs.acrId }}
           assign "$P" b86a8fe4-44ce-4948-aee5-eccb2c155cd7 ${{ steps.infra.outputs.kvId }}
           echo "Waiting 60s for RBAC propagation..."
           sleep 60
@@ -160,6 +161,7 @@ jobs:
           P=${{ steps.infra.outputs.principalId }}
           assign "$P" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
           assign "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
+          assign "$P" 7f951dda-4ed3-4680-a7ca-43fe172d538d ${{ steps.infra.outputs.acrId }}
           assign "$P" b86a8fe4-44ce-4948-aee5-eccb2c155cd7 ${{ steps.infra.outputs.kvId }}
           echo "Waiting 60s for RBAC propagation..."
           sleep 60

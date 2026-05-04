@@ -22,6 +22,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     minimumTlsVersion: 'TLS1_2'
     allowBlobPublicAccess: false
     supportsHttpsTrafficOnly: true
+    allowSharedKeyAccess: false       // company policy: managed identity only
   }
 }
 
@@ -66,11 +67,12 @@ resource workspace 'Microsoft.MachineLearningServices/workspaces@2023-10-01' = {
   location: location
   identity: { type: 'SystemAssigned' }
   properties: {
-    storageAccount:       storage.id
-    keyVault:             keyVault.id
-    applicationInsights:  appInsights.id
-    containerRegistry:    containerRegistry.id
-    publicNetworkAccess:  'Enabled'
+    storageAccount:            storage.id
+    keyVault:                  keyVault.id
+    applicationInsights:       appInsights.id
+    containerRegistry:         containerRegistry.id
+    publicNetworkAccess:       'Enabled'
+    systemDatastoresAuthMode:  'identity'   // use managed identity, not storage keys
   }
 }
 

@@ -58,6 +58,13 @@ jobs:
           echo "acrId=$(echo "$OUTPUT"        | jq -r '.acrId.value')"                >> "$GITHUB_OUTPUT"
           echo "kvId=$(echo "$OUTPUT"         | jq -r '.kvId.value')"                 >> "$GITHUB_OUTPUT"
 
+      # Sync ACR admin credentials into the workspace so serverless compute can pull images
+      - name: Sync workspace keys
+        run: |
+          az ml workspace sync-keys \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ steps.infra.outputs.workspaceName }}
+
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
         run: |
@@ -147,6 +154,13 @@ jobs:
           echo "storageId=$(echo "$OUTPUT"    | jq -r '.storageId.value')"            >> "$GITHUB_OUTPUT"
           echo "acrId=$(echo "$OUTPUT"        | jq -r '.acrId.value')"                >> "$GITHUB_OUTPUT"
           echo "kvId=$(echo "$OUTPUT"         | jq -r '.kvId.value')"                 >> "$GITHUB_OUTPUT"
+
+      # Sync ACR admin credentials into the workspace so serverless compute can pull images
+      - name: Sync workspace keys
+        run: |
+          az ml workspace sync-keys \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ steps.infra.outputs.workspaceName }}
 
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments

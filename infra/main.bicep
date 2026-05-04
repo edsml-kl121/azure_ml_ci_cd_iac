@@ -55,7 +55,7 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
   location: location
   sku: { name: 'Basic' }
   properties: {
-    adminUserEnabled: false
+    adminUserEnabled: true
   }
 }
 

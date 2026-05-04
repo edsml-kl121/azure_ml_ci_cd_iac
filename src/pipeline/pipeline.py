@@ -12,7 +12,7 @@ from pathlib import Path
 
 from azure.ai.ml import MLClient, load_component
 from azure.ai.ml.dsl import pipeline
-from azure.ai.ml.entities import Model
+from azure.ai.ml.entities import Model, ManagedIdentityConfiguration
 from azure.ai.ml.constants import AssetTypes
 from azure.identity import DefaultAzureCredential
 
@@ -51,7 +51,10 @@ def main() -> None:
         return {"model_output": fit.outputs.model_output}
 
     job = diabetes_pipeline()
-    job.settings.default_compute = "serverless"   # no cluster to provision
+    job.settings.default_compute = "serverless"
+    # Inject the workspace system-assigned managed identity into serverless compute
+    # nodes so they can authenticate to storage (required when allowSharedKeyAccess=false)
+    job.identity = ManagedIdentityConfiguration()
 
     # ── Submit and stream logs ────────────────────────────────────────────────
     submitted = ml_client.jobs.create_or_update(

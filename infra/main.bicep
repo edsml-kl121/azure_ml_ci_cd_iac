@@ -11,6 +11,13 @@ var keyVaultName          = 'kv-${environmentName}-${substring(suffix, 0, 10)}'
 var appInsightsName       = 'amlworkshop-${environmentName}-appi'
 var containerRegistryName = 'amlworkshop${environmentName}cr${substring(suffix, 0, 8)}'
 var workspaceName         = 'amlws-${environmentName}-${substring(suffix, 0, 8)}'
+var uamiName              = 'amlws-${environmentName}-uami'
+
+// ── User-Assigned Managed Identity ──────────────────────────────────────────
+resource uami 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: uamiName
+  location: location
+}
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
@@ -65,7 +72,10 @@ resource containerRegistry 'Microsoft.ContainerRegistry/registries@2023-07-01' =
 resource workspace 'Microsoft.MachineLearningServices/workspaces@2024-04-01' = {
   name: workspaceName
   location: location
-  identity: { type: 'SystemAssigned' }
+  identity: {
+    type: 'SystemAssigned,UserAssigned'
+    userAssignedIdentities: { '${uami.id}': {} }
+  }
   properties: {
     storageAccount:            storage.id
     keyVault:                  keyVault.id
@@ -83,3 +93,5 @@ output storageAccountName   string = storage.name
 output workspacePrincipalId string = workspace.identity.principalId
 output storageId            string = storage.id
 output acrId                string = containerRegistry.id
+output uamiClientId         string = uami.properties.clientId
+output uamiPrincipalId      string = uami.properties.principalId

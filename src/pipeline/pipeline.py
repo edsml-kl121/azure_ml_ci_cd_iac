@@ -24,6 +24,8 @@ def main() -> None:
     parser.add_argument("--subscription-id", required=True)
     parser.add_argument("--resource-group",  required=True)
     parser.add_argument("--workspace-name",  required=True)
+    parser.add_argument("--identity-client-id", required=True,
+                        help="Client ID of the UAMI attached to the workspace")
     args = parser.parse_args()
 
     ml_client = MLClient(
@@ -52,9 +54,8 @@ def main() -> None:
 
     job = diabetes_pipeline()
     job.settings.default_compute = "serverless"
-    # Inject the workspace system-assigned managed identity into serverless compute
-    # nodes so they can authenticate to storage (required when allowSharedKeyAccess=false)
-    job.identity = ManagedIdentityConfiguration()
+    # Use the UAMI attached to the workspace so serverless nodes can access storage
+    job.identity = ManagedIdentityConfiguration(client_id=args.identity_client_id)
 
     # ── Submit and stream logs ────────────────────────────────────────────────
     submitted = ml_client.jobs.create_or_update(

@@ -56,6 +56,8 @@ jobs:
           echo "principalId=$(echo "$OUTPUT"  | jq -r '.workspacePrincipalId.value')" >> "$GITHUB_OUTPUT"
           echo "storageId=$(echo "$OUTPUT"    | jq -r '.storageId.value')"            >> "$GITHUB_OUTPUT"
           echo "acrId=$(echo "$OUTPUT"        | jq -r '.acrId.value')"                >> "$GITHUB_OUTPUT"
+          echo "uamiClientId=$(echo "$OUTPUT" | jq -r '.uamiClientId.value')"         >> "$GITHUB_OUTPUT"
+          echo "uamiPrincipalId=$(echo "$OUTPUT" | jq -r '.uamiPrincipalId.value')"   >> "$GITHUB_OUTPUT"
 
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
@@ -71,6 +73,9 @@ jobs:
           assign "$P" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
           assign "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
           assign "$P" 7f951dda-4ed3-4680-a7ca-43fe172d538d ${{ steps.infra.outputs.acrId }}
+          # UAMI needs storage access for pipeline job compute nodes
+          U=${{ steps.infra.outputs.uamiPrincipalId }}
+          assign "$U" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
           echo "Waiting 90s for RBAC propagation..."
           sleep 90
 
@@ -88,7 +93,8 @@ jobs:
           python src/pipeline/pipeline.py \
             --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
             --resource-group  ${{ env.RESOURCE_GROUP }} \
-            --workspace-name  ${{ steps.infra.outputs.workspaceName }}
+            --workspace-name  ${{ steps.infra.outputs.workspaceName }} \
+            --identity-client-id ${{ steps.infra.outputs.uamiClientId }}
 
       # ── 3. Deploy model to Dev endpoint ───────────────────────────────────
       - name: Deploy model to Dev managed endpoint
@@ -144,6 +150,8 @@ jobs:
           echo "principalId=$(echo "$OUTPUT"  | jq -r '.workspacePrincipalId.value')" >> "$GITHUB_OUTPUT"
           echo "storageId=$(echo "$OUTPUT"    | jq -r '.storageId.value')"            >> "$GITHUB_OUTPUT"
           echo "acrId=$(echo "$OUTPUT"        | jq -r '.acrId.value')"                >> "$GITHUB_OUTPUT"
+          echo "uamiClientId=$(echo "$OUTPUT" | jq -r '.uamiClientId.value')"         >> "$GITHUB_OUTPUT"
+          echo "uamiPrincipalId=$(echo "$OUTPUT" | jq -r '.uamiPrincipalId.value')"   >> "$GITHUB_OUTPUT"
 
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
@@ -159,6 +167,9 @@ jobs:
           assign "$P" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
           assign "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
           assign "$P" 7f951dda-4ed3-4680-a7ca-43fe172d538d ${{ steps.infra.outputs.acrId }}
+          # UAMI needs storage access for pipeline job compute nodes
+          U=${{ steps.infra.outputs.uamiPrincipalId }}
+          assign "$U" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
           echo "Waiting 90s for RBAC propagation..."
           sleep 90
 
@@ -176,7 +187,8 @@ jobs:
           python src/pipeline/pipeline.py \
             --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
             --resource-group  ${{ env.RESOURCE_GROUP }} \
-            --workspace-name  ${{ steps.infra.outputs.workspaceName }}
+            --workspace-name  ${{ steps.infra.outputs.workspaceName }} \
+            --identity-client-id ${{ steps.infra.outputs.uamiClientId }}
 
       # ── 3. Deploy model to Prod endpoint ───────────────────────────────────
       - name: Deploy model to Prod managed endpoint

@@ -102,7 +102,7 @@ az ad app federated-credential create --id "$APP_ID" --parameters '{
   "name": "github-main",
   "issuer": "https://token.actions.githubusercontent.com",
   "subject": "repo:edsml-kl121/azure_ml_ci_cd_iac:ref:refs/heads/main",
-  "audiences": ["api://AzureADTokenAudience"]
+  "audiences": ["api://AzureADTokenExchange"]
 }'
 
 # Also add a credential for pull requests (used by ci.yml)
@@ -110,7 +110,7 @@ az ad app federated-credential create --id "$APP_ID" --parameters '{
   "name": "github-pr",
   "issuer": "https://token.actions.githubusercontent.com",
   "subject": "repo:edsml-kl121/azure_ml_ci_cd_iac:pull_request",
-  "audiences": ["api://AzureADTokenAudience"]
+  "audiences": ["api://AzureADTokenExchange"]
 }'
 
 TENANT_ID=$(az account show --query tenantId -o tsv)

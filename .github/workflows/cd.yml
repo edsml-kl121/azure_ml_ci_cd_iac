@@ -74,10 +74,6 @@ jobs:
           echo "Waiting 90s for RBAC propagation..."
           sleep 90
 
-      # ── 1c. Patch default datastores to credential-less (managed identity) ──
-      - name: Switch default datastores to managed identity auth
-        run: echo "(datastores patched after pip install below)"
-
       # ── 2. ML pipeline (train + register model) ────────────────────────────
       - uses: actions/setup-python@v5
         with:
@@ -86,13 +82,6 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
-
-      - name: Patch datastores to managed-identity auth
-        run: |
-          python src/pipeline/patch_datastores.py \
-            --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
-            --resource-group  ${{ env.RESOURCE_GROUP }} \
-            --workspace-name  ${{ steps.infra.outputs.workspaceName }}
 
       - name: Run AML pipeline – train & register model
         run: |
@@ -173,10 +162,6 @@ jobs:
           echo "Waiting 90s for RBAC propagation..."
           sleep 90
 
-      # ── 1c. Patch default datastores to credential-less (managed identity) ──
-      - name: Switch default datastores to managed identity auth
-        run: echo "(datastores patched after pip install below)"
-
       # ── 2. ML pipeline (train + register model in Prod workspace) ──────────
       - uses: actions/setup-python@v5
         with:
@@ -185,13 +170,6 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
-
-      - name: Patch datastores to managed-identity auth
-        run: |
-          python src/pipeline/patch_datastores.py \
-            --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
-            --resource-group  ${{ env.RESOURCE_GROUP }} \
-            --workspace-name  ${{ steps.infra.outputs.workspaceName }}
 
       - name: Run AML pipeline – train & register model
         run: |

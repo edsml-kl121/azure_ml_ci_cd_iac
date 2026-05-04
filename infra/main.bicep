@@ -6,11 +6,11 @@ param location string = resourceGroup().location
 
 // ── Naming ───────────────────────────────────────────────────────────────────
 var suffix = uniqueString(resourceGroup().id)
-var storageAccountName    = 'aml${environmentName}st${substring(suffix, 0, 8)}'
-var keyVaultName          = 'aml-${environmentName}-kv-${substring(suffix, 0, 6)}'
-var appInsightsName       = 'aml-${environmentName}-appi'
-var containerRegistryName = 'aml${environmentName}cr${substring(suffix, 0, 8)}'
-var workspaceName         = 'aml-${environmentName}-workspace'
+var storageAccountName    = 'amlworkshop${environmentName}st${substring(suffix, 0, 8)}'
+var keyVaultName          = 'amlworkshop-${environmentName}-kv-${substring(suffix, 0, 6)}'
+var appInsightsName       = 'amlworkshop-${environmentName}-appi'
+var containerRegistryName = 'amlworkshop${environmentName}cr${substring(suffix, 0, 8)}'
+var workspaceName         = 'amlworkshop-${environmentName}-workspace'
 
 // ── Storage ───────────────────────────────────────────────────────────────────
 resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {

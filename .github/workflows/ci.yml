@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 env:
-  RESOURCE_GROUP: rg-aml-dev
+  RESOURCE_GROUP: rg-workshop-aml-dev
   LOCATION: eastus
 
 jobs:

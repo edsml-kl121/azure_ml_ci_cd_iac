@@ -22,7 +22,7 @@ jobs:
     name: Deploy to Dev
     runs-on: ubuntu-latest
     env:
-      RESOURCE_GROUP: rg-aml-dev
+      RESOURCE_GROUP: rg-workshop-aml-dev
     outputs:
       workspace_name: ${{ steps.infra.outputs.workspaceName }}
 

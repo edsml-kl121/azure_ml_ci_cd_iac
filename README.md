@@ -98,11 +98,10 @@ az role assignment create \
   --scope "/subscriptions/$SUBSCRIPTION_ID"
 
 # Federated credential – trusts the main branch of your repo
-# Replace <ORG> and <REPO> with your GitHub org/username and repo name
 az ad app federated-credential create --id "$APP_ID" --parameters '{
   "name": "github-main",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:<ORG>/<REPO>:ref:refs/heads/main",
+  "subject": "repo:edsml-kl121/azure_ml_ci_cd_iac:ref:refs/heads/main",
   "audiences": ["api://AzureADTokenAudience"]
 }'
 
@@ -110,7 +109,7 @@ az ad app federated-credential create --id "$APP_ID" --parameters '{
 az ad app federated-credential create --id "$APP_ID" --parameters '{
   "name": "github-pr",
   "issuer": "https://token.actions.githubusercontent.com",
-  "subject": "repo:<ORG>/<REPO>:pull_request",
+  "subject": "repo:edsml-kl121/azure_ml_ci_cd_iac:pull_request",
   "audiences": ["api://AzureADTokenAudience"]
 }'
 

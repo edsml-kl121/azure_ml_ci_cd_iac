@@ -86,15 +86,14 @@ jobs:
             CTR=$(echo  "$INFO" | jq -r '.container_name // .file_share_name')
             TYPE=$(echo "$INFO" | jq -r '.type')         # azure_blob | azure_file
 
-            cat > /tmp/ds.yml <<YAML
-\$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json
-name: $DS
-type: $TYPE
-account_name: $ACCT
-container_name: $CTR
-credentials:
-  type: none
-YAML
+            printf '%s\n' \
+              '$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json' \
+              "name: $DS" \
+              "type: $TYPE" \
+              "account_name: $ACCT" \
+              "container_name: $CTR" \
+              'credentials:' \
+              '  type: none' > /tmp/ds.yml
 
             az ml datastore create --file /tmp/ds.yml -g "$RG" -w "$WS" --update-if-exists
             echo "$DS patched to managed-identity auth"
@@ -200,15 +199,14 @@ YAML
             CTR=$(echo  "$INFO" | jq -r '.container_name // .file_share_name')
             TYPE=$(echo "$INFO" | jq -r '.type')
 
-            cat > /tmp/ds.yml <<YAML
-\$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json
-name: $DS
-type: $TYPE
-account_name: $ACCT
-container_name: $CTR
-credentials:
-  type: none
-YAML
+            printf '%s\n' \
+              '$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json' \
+              "name: $DS" \
+              "type: $TYPE" \
+              "account_name: $ACCT" \
+              "container_name: $CTR" \
+              'credentials:' \
+              '  type: none' > /tmp/ds.yml
 
             az ml datastore create --file /tmp/ds.yml -g "$RG" -w "$WS" --update-if-exists
             echo "$DS patched to managed-identity auth"

@@ -32,14 +32,17 @@ def main() -> None:
             print(f"  {ds_name}: not found, skipping ({e})")
             continue
 
-        # Rebuild with no credentials (managed identity), preserving is_default
+        # workspaceblobstore is always the default; workspacefilestore is not
+        is_default = (ds_name == "workspaceblobstore")
+
+        # Rebuild with no credentials (managed identity)
         if isinstance(ds, AzureBlobDatastore):
             updated = AzureBlobDatastore(
                 name=ds.name,
                 account_name=ds.account_name,
                 container_name=ds.container_name,
                 credentials=None,
-                is_default=ds.is_default,
+                is_default=is_default,
             )
         elif isinstance(ds, AzureFileDatastore):
             updated = AzureFileDatastore(
@@ -47,7 +50,7 @@ def main() -> None:
                 account_name=ds.account_name,
                 file_share_name=ds.file_share_name,
                 credentials=None,
-                is_default=ds.is_default,
+                is_default=is_default,
             )
         else:
             print(f"  {ds_name}: unexpected type {type(ds).__name__}, skipping")

@@ -58,13 +58,6 @@ jobs:
           echo "acrId=$(echo "$OUTPUT"        | jq -r '.acrId.value')"                >> "$GITHUB_OUTPUT"
           echo "kvId=$(echo "$OUTPUT"         | jq -r '.kvId.value')"                 >> "$GITHUB_OUTPUT"
 
-      # Sync ACR admin credentials into the workspace so serverless compute can pull images
-      - name: Sync workspace keys
-        run: |
-          az ml workspace sync-keys \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ steps.infra.outputs.workspaceName }}
-
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
         run: |
@@ -80,8 +73,16 @@ jobs:
           assign "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
           assign "$P" 7f951dda-4ed3-4680-a7ca-43fe172d538d ${{ steps.infra.outputs.acrId }}
           assign "$P" b86a8fe4-44ce-4948-aee5-eccb2c155cd7 ${{ steps.infra.outputs.kvId }}
-          echo "Waiting 60s for RBAC propagation..."
-          sleep 60
+          # Wait for RBAC to propagate before sync-keys reads KV
+          echo "Waiting 120s for RBAC propagation..."
+          sleep 120
+
+      # Sync storage account key into Key Vault so compute nodes can write outputs
+      - name: Sync workspace keys
+        run: |
+          az ml workspace sync-keys \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ steps.infra.outputs.workspaceName }}
 
       # ── 2. ML pipeline (train + register model) ────────────────────────────
       - uses: actions/setup-python@v5
@@ -155,13 +156,6 @@ jobs:
           echo "acrId=$(echo "$OUTPUT"        | jq -r '.acrId.value')"                >> "$GITHUB_OUTPUT"
           echo "kvId=$(echo "$OUTPUT"         | jq -r '.kvId.value')"                 >> "$GITHUB_OUTPUT"
 
-      # Sync ACR admin credentials into the workspace so serverless compute can pull images
-      - name: Sync workspace keys
-        run: |
-          az ml workspace sync-keys \
-            --resource-group ${{ env.RESOURCE_GROUP }} \
-            --name ${{ steps.infra.outputs.workspaceName }}
-
       # ── 1b. Grant workspace identity roles (idempotent) ───────────────────
       - name: Grant workspace role assignments
         run: |
@@ -177,8 +171,16 @@ jobs:
           assign "$P" 8311e382-0749-4cb8-b61a-304f252e45ec ${{ steps.infra.outputs.acrId }}
           assign "$P" 7f951dda-4ed3-4680-a7ca-43fe172d538d ${{ steps.infra.outputs.acrId }}
           assign "$P" b86a8fe4-44ce-4948-aee5-eccb2c155cd7 ${{ steps.infra.outputs.kvId }}
-          echo "Waiting 60s for RBAC propagation..."
-          sleep 60
+          # Wait for RBAC to propagate before sync-keys reads KV
+          echo "Waiting 120s for RBAC propagation..."
+          sleep 120
+
+      # Sync storage account key into Key Vault so compute nodes can write outputs
+      - name: Sync workspace keys
+        run: |
+          az ml workspace sync-keys \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --name ${{ steps.infra.outputs.workspaceName }}
 
       # ── 2. ML pipeline (train + register model in Prod workspace) ──────────
       - uses: actions/setup-python@v5

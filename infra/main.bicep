@@ -34,7 +34,7 @@ resource keyVault 'Microsoft.KeyVault/vaults@2023-02-01' = {
     tenantId: tenant().tenantId
     enableSoftDelete: true
     softDeleteRetentionInDays: 7
-    enableRbacAuthorization: true
+    enableRbacAuthorization: false   // AML manages its own access policies internally
   }
 }
 
@@ -79,4 +79,3 @@ output storageAccountName   string = storage.name
 output workspacePrincipalId string = workspace.identity.principalId
 output storageId            string = storage.id
 output acrId                string = containerRegistry.id
-output kvId                 string = keyVault.id

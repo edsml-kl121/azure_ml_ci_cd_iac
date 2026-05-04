@@ -76,28 +76,7 @@ jobs:
 
       # ── 1c. Patch default datastores to credential-less (managed identity) ──
       - name: Switch default datastores to managed identity auth
-        run: |
-          WS=${{ steps.infra.outputs.workspaceName }}
-          RG=${{ env.RESOURCE_GROUP }}
-
-          for DS in workspaceblobstore workspacefilestore; do
-            INFO=$(az ml datastore show --name "$DS" -g "$RG" -w "$WS" 2>/dev/null) || continue
-            ACCT=$(echo "$INFO" | jq -r '.account_name')
-            CTR=$(echo  "$INFO" | jq -r '.container_name // .file_share_name')
-            TYPE=$(echo "$INFO" | jq -r '.type')         # azure_blob | azure_file
-
-            printf '%s\n' \
-              '$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json' \
-              "name: $DS" \
-              "type: $TYPE" \
-              "account_name: $ACCT" \
-              "container_name: $CTR" \
-              'credentials:' \
-              '  type: none' > /tmp/ds.yml
-
-            az ml datastore create --file /tmp/ds.yml -g "$RG" -w "$WS" --update-if-exists
-            echo "$DS patched to managed-identity auth"
-          done
+        run: echo "(datastores patched after pip install below)"
 
       # ── 2. ML pipeline (train + register model) ────────────────────────────
       - uses: actions/setup-python@v5
@@ -107,6 +86,13 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
+
+      - name: Patch datastores to managed-identity auth
+        run: |
+          python src/pipeline/patch_datastores.py \
+            --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --resource-group  ${{ env.RESOURCE_GROUP }} \
+            --workspace-name  ${{ steps.infra.outputs.workspaceName }}
 
       - name: Run AML pipeline – train & register model
         run: |
@@ -189,28 +175,7 @@ jobs:
 
       # ── 1c. Patch default datastores to credential-less (managed identity) ──
       - name: Switch default datastores to managed identity auth
-        run: |
-          WS=${{ steps.infra.outputs.workspaceName }}
-          RG=${{ env.RESOURCE_GROUP }}
-
-          for DS in workspaceblobstore workspacefilestore; do
-            INFO=$(az ml datastore show --name "$DS" -g "$RG" -w "$WS" 2>/dev/null) || continue
-            ACCT=$(echo "$INFO" | jq -r '.account_name')
-            CTR=$(echo  "$INFO" | jq -r '.container_name // .file_share_name')
-            TYPE=$(echo "$INFO" | jq -r '.type')
-
-            printf '%s\n' \
-              '$schema: https://azuremlschemas.azureedge.net/latest/azureBlob.schema.json' \
-              "name: $DS" \
-              "type: $TYPE" \
-              "account_name: $ACCT" \
-              "container_name: $CTR" \
-              'credentials:' \
-              '  type: none' > /tmp/ds.yml
-
-            az ml datastore create --file /tmp/ds.yml -g "$RG" -w "$WS" --update-if-exists
-            echo "$DS patched to managed-identity auth"
-          done
+        run: echo "(datastores patched after pip install below)"
 
       # ── 2. ML pipeline (train + register model in Prod workspace) ──────────
       - uses: actions/setup-python@v5
@@ -220,6 +185,13 @@ jobs:
 
       - name: Install Python dependencies
         run: pip install -r requirements.txt
+
+      - name: Patch datastores to managed-identity auth
+        run: |
+          python src/pipeline/patch_datastores.py \
+            --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
+            --resource-group  ${{ env.RESOURCE_GROUP }} \
+            --workspace-name  ${{ steps.infra.outputs.workspaceName }}
 
       - name: Run AML pipeline – train & register model
         run: |

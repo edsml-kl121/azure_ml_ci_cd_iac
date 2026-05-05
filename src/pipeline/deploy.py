@@ -16,6 +16,7 @@ import urllib.request
 
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
+    Environment,
     ManagedOnlineDeployment,
     ManagedOnlineEndpoint,
     ProbeSettings,
@@ -106,18 +107,36 @@ def main() -> None:
     # ── Deploy latest model version ───────────────────────────────────────────
     model = ml_client.models.get("diabetes-classifier", label="latest")
 
-    # No explicit environment is specified here. AzureML:
-    #   1. Uses its curated inference base image (azureml-inference-server-http pre-installed)
-    #   2. Builds a new conda env from the model's bundled conda.yaml
-    # The training conda.yml now includes azureml-ai-monitoring, so the model's
-    # conda.yaml will contain it, satisfying the import in mlflow_score_script.py.
+    # AzureML's mlflow_score_script.py (entry script for no-code MLflow deployment)
+    # unconditionally imports `from azureml.ai.monitoring import Collector`, but
+    # MLflow autolog does not include azureml-ai-monitoring in the model's conda.yaml.
+    # Specifying an explicit Environment here ensures it is always present.
+    inference_env = Environment(
+        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest",
+        conda_file={
+            "name": "sklearn-mlflow-inference",
+            "channels": ["conda-forge"],
+            "dependencies": [
+                "python=3.10",
+                {"pip": [
+                    "azureml-inference-server-http",
+                    "azureml-ai-monitoring",
+                    "mlflow==2.16.0",
+                    "scikit-learn==1.4.2",
+                    "pandas>=2.0",
+                    "numpy>=1.26",
+                    "joblib",
+                ]},
+            ],
+        },
+    )
     deployment = ManagedOnlineDeployment(
         name="blue",
         endpoint_name=args.endpoint_name,
         model=model,
+        environment=inference_env,
         instance_type="Standard_DS3_v2",
         instance_count=1,
-        # Give the container enough time to install the conda env on first start
         liveness_probe=ProbeSettings(
             failure_threshold=30,
             success_threshold=1,

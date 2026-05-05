@@ -13,7 +13,6 @@ import argparse
 
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
-    Environment,
     ManagedOnlineDeployment,
     ManagedOnlineEndpoint,
     ProbeSettings,
@@ -48,39 +47,19 @@ def main() -> None:
     # ── Deploy latest model version ───────────────────────────────────────────
     model = ml_client.models.get("diabetes-classifier", label="latest")
 
-    # Explicit environment so the inference server package is always present.
-    # Without this AML uses the MLflow model's bundled conda.yaml which lacks
-    # azureml-inference-server-http, causing the container to 502 on startup.
-    inference_env = Environment(
-        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest",
-        conda_file={
-            "name": "diabetes-inference-env",
-            "channels": ["conda-forge", "defaults"],
-            "dependencies": [
-                "python=3.10",
-                {"pip": [
-                    "setuptools>=69,<70",
-                    "azureml-inference-server-http",
-                    "azureml-ai-monitoring",   # provides azureml.ai.monitoring used by mlflow_score_script.py
-                    "azureml-mlflow==1.55.0",
-                    "mlflow==2.16.0",
-                    "scikit-learn==1.4.2",
-                    "pandas==2.2.2",
-                    "numpy==1.26.4",
-                    "joblib==1.4.2",
-                ]},
-            ],
-        },
-    )
-
+    # Do NOT specify a custom environment for MLflow models.
+    # AML automatically uses its curated MLflow inference environment which:
+    #   - includes azureml-inference-server-http and azureml-ai-monitoring
+    #   - installs the model's bundled conda.yaml (scikit-learn, mlflow, etc.)
+    # Specifying an explicit conda env on top of the training base image causes
+    # package conflicts that crash the container on startup.
     deployment = ManagedOnlineDeployment(
         name="blue",
         endpoint_name=args.endpoint_name,
         model=model,
-        environment=inference_env,
-        instance_type="Standard_DS2_v2",
+        instance_type="Standard_DS3_v2",
         instance_count=1,
-        # Give the container enough time to install conda env on first start
+        # Give the container enough time to install the conda env on first start
         liveness_probe=ProbeSettings(
             failure_threshold=30,
             success_threshold=1,

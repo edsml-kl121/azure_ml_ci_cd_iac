@@ -106,12 +106,11 @@ def main() -> None:
     # ── Deploy latest model version ───────────────────────────────────────────
     model = ml_client.models.get("diabetes-classifier", label="latest")
 
-    # Do NOT specify a custom environment for MLflow models.
-    # AML automatically uses its curated MLflow inference environment which:
-    #   - includes azureml-inference-server-http and azureml-ai-monitoring
-    #   - installs the model's bundled conda.yaml (scikit-learn, mlflow, etc.)
-    # Specifying an explicit conda env on top of the training base image causes
-    # package conflicts that crash the container on startup.
+    # No explicit environment is specified here. AzureML:
+    #   1. Uses its curated inference base image (azureml-inference-server-http pre-installed)
+    #   2. Builds a new conda env from the model's bundled conda.yaml
+    # The training conda.yml now includes azureml-ai-monitoring, so the model's
+    # conda.yaml will contain it, satisfying the import in mlflow_score_script.py.
     deployment = ManagedOnlineDeployment(
         name="blue",
         endpoint_name=args.endpoint_name,

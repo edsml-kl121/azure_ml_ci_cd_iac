@@ -6,6 +6,7 @@ dependencies:
   - pip:
     - setuptools>=69,<70        # pkg_resources removed in setuptools>=70
     - azureml-mlflow==1.55.0    # registers azureml:// URI scheme for mlflow tracking
+    - azureml-ai-monitoring     # required by AzureML mlflow_score_script.py at inference time
     - scikit-learn==1.4.2
     - pandas==2.2.2
     - numpy==1.26.4

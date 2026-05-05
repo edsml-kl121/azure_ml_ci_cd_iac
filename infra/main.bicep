@@ -10,7 +10,7 @@ var storageAccountName    = 'amlworkshop${environmentName}st${substring(suffix, 
 var keyVaultName          = 'kvm-${environmentName}-${substring(suffix, 0, 10)}'
 var appInsightsName       = 'amlworkshop-${environmentName}-appi'
 var containerRegistryName = 'amlworkshop${environmentName}cr${substring(suffix, 0, 8)}'
-var workspaceName         = 'amlws-${environmentName}-${substring(suffix, 0, 8)}'
+var workspaceName         = 'amlwsm-${environmentName}-${substring(suffix, 0, 8)}'
 var uamiName              = 'amlws-${environmentName}-uami'
 
 // ── User-Assigned Managed Identity ──────────────────────────────────────────

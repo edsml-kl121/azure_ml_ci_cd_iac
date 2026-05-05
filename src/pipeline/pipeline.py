@@ -21,11 +21,22 @@ COMPONENTS = Path(__file__).parent / "components"
 
 
 def _build_credential() -> DefaultAzureCredential:
-    # In CI, avoid AzureCliCredential because its assertion can expire during
-    # long-running operations. Keep CLI fallback for local execution.
+    # In CI, only exclude AzureCliCredential when workload identity is fully
+    # configured. Some runners do not expose a federated token file to SDKs,
+    # and in that case CLI fallback is required.
     in_github_actions = os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+    has_workload_identity = all(
+        os.getenv(var)
+        for var in ("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_FEDERATED_TOKEN_FILE")
+    )
+    exclude_cli = in_github_actions and has_workload_identity
+
+    if in_github_actions:
+        mode = "workload_identity" if has_workload_identity else "azure_cli_fallback"
+        print(f"Credential mode: {mode}")
+
     return DefaultAzureCredential(
-        exclude_cli_credential=in_github_actions,
+        exclude_cli_credential=exclude_cli,
         exclude_interactive_browser_credential=True,
     )
 

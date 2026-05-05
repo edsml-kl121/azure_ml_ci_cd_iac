@@ -12,7 +12,12 @@ Usage:
 import argparse
 
 from azure.ai.ml import MLClient
-from azure.ai.ml.entities import ManagedOnlineDeployment, ManagedOnlineEndpoint
+from azure.ai.ml.entities import (
+    Environment,
+    ManagedOnlineDeployment,
+    ManagedOnlineEndpoint,
+    ProbeSettings,
+)
 from azure.identity import DefaultAzureCredential
 
 
@@ -43,12 +48,51 @@ def main() -> None:
     # ── Deploy latest model version ───────────────────────────────────────────
     model = ml_client.models.get("diabetes-classifier", label="latest")
 
+    # Explicit environment so the inference server package is always present.
+    # Without this AML uses the MLflow model's bundled conda.yaml which lacks
+    # azureml-inference-server-http, causing the container to 502 on startup.
+    inference_env = Environment(
+        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest",
+        conda_file={
+            "name": "diabetes-inference-env",
+            "channels": ["conda-forge", "defaults"],
+            "dependencies": [
+                "python=3.10",
+                {"pip": [
+                    "setuptools>=69,<70",
+                    "azureml-inference-server-http",
+                    "azureml-ai-monitoring",   # provides azureml.ai.monitoring used by mlflow_score_script.py
+                    "azureml-mlflow==1.55.0",
+                    "mlflow==2.16.0",
+                    "scikit-learn==1.4.2",
+                    "pandas==2.2.2",
+                    "numpy==1.26.4",
+                    "joblib==1.4.2",
+                ]},
+            ],
+        },
+    )
+
     deployment = ManagedOnlineDeployment(
         name="blue",
         endpoint_name=args.endpoint_name,
         model=model,
+        environment=inference_env,
         instance_type="Standard_DS2_v2",
         instance_count=1,
+        # Give the container enough time to install conda env on first start
+        liveness_probe=ProbeSettings(
+            failure_threshold=30,
+            success_threshold=1,
+            period=100,
+            initial_delay=500,
+        ),
+        readiness_probe=ProbeSettings(
+            failure_threshold=30,
+            success_threshold=1,
+            period=100,
+            initial_delay=500,
+        ),
     )
     ml_client.online_deployments.begin_create_or_update(deployment).result()
 

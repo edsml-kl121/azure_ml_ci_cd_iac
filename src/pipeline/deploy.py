@@ -10,7 +10,9 @@ Usage:
         --endpoint-name   diabetes-endpoint-dev   # or -prod
 """
 import argparse
+import json
 import os
+import urllib.request
 
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
@@ -19,28 +21,43 @@ from azure.ai.ml.entities import (
     ProbeSettings,
 )
 from azure.core.exceptions import ClientAuthenticationError
-from azure.identity import DefaultAzureCredential
+from azure.identity import ClientAssertionCredential, DefaultAzureCredential
 
 
-def _build_credential() -> DefaultAzureCredential:
-    # In CI, only exclude AzureCliCredential when workload identity is fully
-    # configured. Some runners do not expose a federated token file to SDKs,
-    # and in that case CLI fallback is required.
-    in_github_actions = os.getenv("GITHUB_ACTIONS", "").lower() == "true"
-    has_workload_identity = all(
-        os.getenv(var)
-        for var in ("AZURE_CLIENT_ID", "AZURE_TENANT_ID", "AZURE_FEDERATED_TOKEN_FILE")
+def _get_github_oidc_token() -> str:
+    """Fetch a fresh GitHub OIDC assertion from the Actions token endpoint."""
+    url = os.environ["ACTIONS_ID_TOKEN_REQUEST_URL"]
+    request_token = os.environ["ACTIONS_ID_TOKEN_REQUEST_TOKEN"]
+    sep = "&" if "?" in url else "?"
+    req = urllib.request.Request(
+        f"{url}{sep}audience=api://AzureADTokenExchange",
+        headers={"Authorization": f"bearer {request_token}", "Accept": "application/json"},
     )
-    exclude_cli = in_github_actions and has_workload_identity
+    with urllib.request.urlopen(req, timeout=30) as resp:  # noqa: S310
+        return json.loads(resp.read())["value"]
 
-    if in_github_actions:
-        mode = "workload_identity" if has_workload_identity else "azure_cli_fallback"
-        print(f"Credential mode: {mode}")
 
-    return DefaultAzureCredential(
-        exclude_cli_credential=exclude_cli,
-        exclude_interactive_browser_credential=True,
-    )
+def _build_credential():
+    """Return the best available credential for the current environment.
+
+    In GitHub Actions with OIDC (id-token: write), uses ClientAssertionCredential
+    backed by the GitHub OIDC token endpoint.  The callback is invoked on every
+    token refresh, so long-running pollers (deployment wait) never hit
+    AADSTS700024 assertion-expiry errors.
+
+    Locally, falls back to DefaultAzureCredential (Azure CLI, VS Code, etc.).
+    """
+    oidc_url = os.getenv("ACTIONS_ID_TOKEN_REQUEST_URL")
+    if os.getenv("GITHUB_ACTIONS", "").lower() == "true" and oidc_url:
+        print("Credential mode: github_oidc (ClientAssertionCredential)")
+        return ClientAssertionCredential(
+            tenant_id=os.environ["AZURE_TENANT_ID"],
+            client_id=os.environ["AZURE_CLIENT_ID"],
+            func=_get_github_oidc_token,
+        )
+
+    print("Credential mode: DefaultAzureCredential (local)")
+    return DefaultAzureCredential(exclude_interactive_browser_credential=True)
 
 
 def _print_deployment_logs(

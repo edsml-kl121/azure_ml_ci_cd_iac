@@ -7,7 +7,7 @@ param location string = resourceGroup().location
 // ── Naming ───────────────────────────────────────────────────────────────────
 var suffix = uniqueString(resourceGroup().id)
 var storageAccountName    = 'amlworkshop${environmentName}st${substring(suffix, 0, 8)}'
-var keyVaultName          = 'kv-${environmentName}-${substring(suffix, 0, 10)}'
+var keyVaultName          = 'kvm-${environmentName}-${substring(suffix, 0, 10)}'
 var appInsightsName       = 'amlworkshop-${environmentName}-appi'
 var containerRegistryName = 'amlworkshop${environmentName}cr${substring(suffix, 0, 8)}'
 var workspaceName         = 'amlws-${environmentName}-${substring(suffix, 0, 8)}'

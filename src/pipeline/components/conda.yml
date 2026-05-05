@@ -4,6 +4,7 @@ channels:
 dependencies:
   - python=3.10
   - pip:
+    - setuptools>=69,<70        # pkg_resources removed in setuptools>=70
     - scikit-learn==1.4.2
     - pandas==2.2.2
     - numpy==1.26.4

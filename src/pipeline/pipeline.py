@@ -8,6 +8,7 @@ Usage (run locally or from GitHub Actions):
         --workspace-name  <ws_name>
 """
 import argparse
+import os
 from pathlib import Path
 
 from azure.ai.ml import MLClient, load_component
@@ -17,6 +18,16 @@ from azure.ai.ml.constants import AssetTypes
 from azure.identity import DefaultAzureCredential
 
 COMPONENTS = Path(__file__).parent / "components"
+
+
+def _build_credential() -> DefaultAzureCredential:
+    # In CI, avoid AzureCliCredential because its assertion can expire during
+    # long-running operations. Keep CLI fallback for local execution.
+    in_github_actions = os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+    return DefaultAzureCredential(
+        exclude_cli_credential=in_github_actions,
+        exclude_interactive_browser_credential=True,
+    )
 
 
 def main() -> None:
@@ -29,7 +40,7 @@ def main() -> None:
     args = parser.parse_args()
 
     ml_client = MLClient(
-        DefaultAzureCredential(),
+        _build_credential(),
         args.subscription_id,
         args.resource_group,
         args.workspace_name,

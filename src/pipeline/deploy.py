@@ -10,6 +10,7 @@ Usage:
         --endpoint-name   diabetes-endpoint-dev   # or -prod
 """
 import argparse
+import os
 
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
@@ -17,7 +18,37 @@ from azure.ai.ml.entities import (
     ManagedOnlineEndpoint,
     ProbeSettings,
 )
+from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import DefaultAzureCredential
+
+
+def _build_credential() -> DefaultAzureCredential:
+    # In CI, avoid AzureCliCredential because its assertion can expire during
+    # long-running pollers. Keep CLI fallback for local execution.
+    in_github_actions = os.getenv("GITHUB_ACTIONS", "").lower() == "true"
+    return DefaultAzureCredential(
+        exclude_cli_credential=in_github_actions,
+        exclude_interactive_browser_credential=True,
+    )
+
+
+def _print_deployment_logs(
+    ml_client: MLClient,
+    endpoint_name: str,
+    deployment_name: str,
+    lines: int = 300,
+) -> None:
+    try:
+        logs = ml_client.online_deployments.get_logs(
+            endpoint_name=endpoint_name,
+            name=deployment_name,
+            lines=lines,
+        )
+        print("\n===== Online deployment container logs (tail) =====")
+        print(logs)
+        print("===== End container logs =====\n")
+    except Exception as log_err:  # noqa: BLE001
+        print(f"Failed to fetch online deployment logs: {log_err}")
 
 
 def main() -> None:
@@ -29,7 +60,7 @@ def main() -> None:
     args = parser.parse_args()
 
     ml_client = MLClient(
-        DefaultAzureCredential(),
+        _build_credential(),
         args.subscription_id,
         args.resource_group,
         args.workspace_name,
@@ -73,7 +104,23 @@ def main() -> None:
             initial_delay=500,
         ),
     )
-    ml_client.online_deployments.begin_create_or_update(deployment).result()
+    try:
+        ml_client.online_deployments.begin_create_or_update(deployment).result()
+    except ClientAuthenticationError as auth_err:
+        print(
+            "Authentication failed while polling deployment state. "
+            "If running in GitHub Actions with OIDC, refresh azure/login "
+            "immediately before this step."
+        )
+        _print_deployment_logs(ml_client, args.endpoint_name, "blue")
+        raise auth_err
+    except Exception as deploy_err:  # noqa: BLE001
+        print(
+            "Deployment failed. Fetching online deployment logs to help "
+            "diagnose liveness/readiness probe and startup issues."
+        )
+        _print_deployment_logs(ml_client, args.endpoint_name, "blue")
+        raise deploy_err
 
     # Route 100 % of traffic to this deployment
     endpoint.traffic = {"blue": 100}

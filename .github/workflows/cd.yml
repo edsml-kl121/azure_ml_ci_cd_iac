@@ -13,6 +13,9 @@ permissions:
 
 env:
   LOCATION: eastus
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # JOB 1 – Deploy to Dev  (no approval gate)
@@ -95,6 +98,13 @@ jobs:
             --resource-group  ${{ env.RESOURCE_GROUP }} \
             --workspace-name  ${{ steps.infra.outputs.workspaceName }} \
             --identity-client-id ${{ steps.infra.outputs.uamiClientId }}
+
+      # Refresh OIDC-backed Azure CLI session before deployment polling.
+      - uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ── 3. Deploy model to Dev endpoint ───────────────────────────────────
       - name: Deploy model to Dev managed endpoint
@@ -189,6 +199,13 @@ jobs:
             --resource-group  ${{ env.RESOURCE_GROUP }} \
             --workspace-name  ${{ steps.infra.outputs.workspaceName }} \
             --identity-client-id ${{ steps.infra.outputs.uamiClientId }}
+
+      # Refresh OIDC-backed Azure CLI session before deployment polling.
+      - uses: azure/login@v2
+        with:
+          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
       # ── 3. Deploy model to Prod endpoint ───────────────────────────────────
       - name: Deploy model to Prod managed endpoint

@@ -5,9 +5,9 @@ dependencies:
   - python=3.10
   - pip:
     - setuptools>=69,<70        # pkg_resources removed in setuptools>=70
-    - azureml-mlflow>=1.55.0    # registers azureml:// URI scheme for mlflow tracking
+    - azureml-mlflow==1.55.0    # registers azureml:// URI scheme for mlflow tracking
     - scikit-learn==1.4.2
     - pandas==2.2.2
     - numpy==1.26.4
-    - mlflow==2.13.0
+    - mlflow==2.16.0            # >=2.14.0 required for MlflowTracingException
     - joblib==1.4.2

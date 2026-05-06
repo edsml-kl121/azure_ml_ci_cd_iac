@@ -79,6 +79,10 @@ jobs:
           # UAMI needs storage access for pipeline job compute nodes
           U=${{ steps.infra.outputs.uamiPrincipalId }}
           assign "$U" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
+          # GitHub Actions SP needs Storage Blob Data Contributor to upload code assets
+          # (allowSharedKeyAccess=false means Contributor on the RG is not sufficient)
+          SP_OID=$(az ad sp show --id "${{ env.AZURE_CLIENT_ID }}" --query id -o tsv)
+          assign "$SP_OID" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
           echo "Waiting 90s for RBAC propagation..."
           sleep 90
 
@@ -92,6 +96,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run AML pipeline – train & register model
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python src/pipeline/pipeline.py \
             --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
@@ -99,15 +105,10 @@ jobs:
             --workspace-name  ${{ steps.infra.outputs.workspaceName }} \
             --identity-client-id ${{ steps.infra.outputs.uamiClientId }}
 
-      # Refresh OIDC-backed Azure CLI session before deployment polling.
-      - uses: azure/login@v2
-        with:
-          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       # ── 3. Deploy model to Dev endpoint ───────────────────────────────────
       - name: Deploy model to Dev managed endpoint
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python src/pipeline/deploy.py \
             --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
@@ -180,6 +181,10 @@ jobs:
           # UAMI needs storage access for pipeline job compute nodes
           U=${{ steps.infra.outputs.uamiPrincipalId }}
           assign "$U" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
+          # GitHub Actions SP needs Storage Blob Data Contributor to upload code assets
+          # (allowSharedKeyAccess=false means Contributor on the RG is not sufficient)
+          SP_OID=$(az ad sp show --id "${{ env.AZURE_CLIENT_ID }}" --query id -o tsv)
+          assign "$SP_OID" ba92f5b4-2d11-453d-a403-e96b0029c9fe ${{ steps.infra.outputs.storageId }}
           echo "Waiting 90s for RBAC propagation..."
           sleep 90
 
@@ -193,6 +198,8 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run AML pipeline – train & register model
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python src/pipeline/pipeline.py \
             --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \
@@ -200,15 +207,10 @@ jobs:
             --workspace-name  ${{ steps.infra.outputs.workspaceName }} \
             --identity-client-id ${{ steps.infra.outputs.uamiClientId }}
 
-      # Refresh OIDC-backed Azure CLI session before deployment polling.
-      - uses: azure/login@v2
-        with:
-          client-id:       ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id:       ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
-
       # ── 3. Deploy model to Prod endpoint ───────────────────────────────────
       - name: Deploy model to Prod managed endpoint
+        env:
+          ACTIONS_ID_TOKEN_REQUEST_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           python src/pipeline/deploy.py \
             --subscription-id ${{ secrets.AZURE_SUBSCRIPTION_ID }} \

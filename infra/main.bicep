@@ -30,6 +30,7 @@ resource storage 'Microsoft.Storage/storageAccounts@2023-01-01' = {
     allowBlobPublicAccess: false
     supportsHttpsTrafficOnly: true
     allowSharedKeyAccess: false       // company policy: managed identity only
+    publicNetworkAccess: 'Enabled'    // required: AzureML inference pods reach storage over public endpoint
   }
 }
 

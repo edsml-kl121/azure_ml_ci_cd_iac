@@ -116,14 +116,13 @@ def main() -> None:
     workspace_obj = ml_client.workspaces.get(args.workspace_name)
     storage_id = workspace_obj.storage_account
 
-    # Storage Blob Data Reader (built-in role, stable ID)
-    _READER_ROLE = "2a2b9908-6ea1-4ae2-8e65-a410df84e7d2"
+    # Storage Blob Data Reader (built-in role)
     result = subprocess.run(
         [
             "az", "role", "assignment", "create",
             "--assignee-object-id", endpoint_principal_id,
             "--assignee-principal-type", "ServicePrincipal",
-            "--role", _READER_ROLE,
+            "--role", "Storage Blob Data Reader",
             "--scope", storage_id,
         ],
         capture_output=True, text=True,

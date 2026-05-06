@@ -12,9 +12,9 @@ Usage:
 import argparse
 import json
 import os
+import subprocess
 import time
 import urllib.request
-import uuid
 
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
@@ -24,8 +24,6 @@ from azure.ai.ml.entities import (
 )
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import ClientAssertionCredential, DefaultAzureCredential
-from azure.mgmt.authorization import AuthorizationManagementClient
-from azure.mgmt.authorization.models import RoleAssignmentCreateParameters
 
 
 def _get_github_oidc_token() -> str:
@@ -118,35 +116,29 @@ def main() -> None:
     workspace_obj = ml_client.workspaces.get(args.workspace_name)
     storage_id = workspace_obj.storage_account
 
-    auth_client = AuthorizationManagementClient(credential, args.subscription_id)
-    # Storage Blob Data Reader role definition ID (built-in, stable)
+    # Storage Blob Data Reader (built-in role, stable ID)
     _READER_ROLE = "2a2b9908-6ea1-4ae2-8e65-a410df84e7d2"
-    role_def_id = (
-        f"/subscriptions/{args.subscription_id}"
-        f"/providers/Microsoft.Authorization/roleDefinitions/{_READER_ROLE}"
+    result = subprocess.run(
+        [
+            "az", "role", "assignment", "create",
+            "--assignee-object-id", endpoint_principal_id,
+            "--assignee-principal-type", "ServicePrincipal",
+            "--role", _READER_ROLE,
+            "--scope", storage_id,
+        ],
+        capture_output=True, text=True,
     )
-    # Deterministic name so re-runs are idempotent
-    assignment_name = str(
-        uuid.uuid5(uuid.NAMESPACE_URL, f"{storage_id}/{endpoint_principal_id}/{_READER_ROLE}")
-    )
-    try:
-        auth_client.role_assignments.create(
-            scope=storage_id,
-            role_assignment_name=assignment_name,
-            parameters=RoleAssignmentCreateParameters(
-                role_definition_id=role_def_id,
-                principal_id=endpoint_principal_id,
-                principal_type="ServicePrincipal",
-            ),
-        )
-        print(f"Granted Storage Blob Data Reader to endpoint identity ({endpoint_principal_id}).")
-        print("Waiting 60s for RBAC propagation...")
-        time.sleep(60)
-    except Exception as rbac_err:  # noqa: BLE001
-        if "RoleAssignmentExists" in str(rbac_err) or "Conflict" in str(rbac_err):
+    if result.returncode != 0:
+        if "RoleAssignmentExists" in result.stderr or "Conflict" in result.stderr:
             print("Storage Blob Data Reader already assigned (idempotent).")
         else:
-            raise
+            raise RuntimeError(
+                f"Failed to assign Storage Blob Data Reader:\n{result.stderr}"
+            )
+    else:
+        print(f"Granted Storage Blob Data Reader to endpoint identity ({endpoint_principal_id}).")
+    print("Waiting 60s for RBAC propagation...")
+    time.sleep(60)
 
     # ── Deploy latest model version ───────────────────────────────────────────
     model = ml_client.models.get("diabetes-classifier", label="latest")

@@ -1,7 +1,6 @@
 # Azure ML SDK v2
 azure-ai-ml>=1.15.0
 azure-identity>=1.15.0
-azure-mgmt-authorization>=4.0.0
 
 # ML / data
 scikit-learn>=1.4.0

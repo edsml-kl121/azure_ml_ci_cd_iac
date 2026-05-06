@@ -12,7 +12,9 @@ Usage:
 import argparse
 import json
 import os
+import time
 import urllib.request
+import uuid
 
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
@@ -22,6 +24,8 @@ from azure.ai.ml.entities import (
 )
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import ClientAssertionCredential, DefaultAzureCredential
+from azure.mgmt.authorization import AuthorizationManagementClient
+from azure.mgmt.authorization.models import RoleAssignmentCreateParameters
 
 
 def _get_github_oidc_token() -> str:
@@ -87,8 +91,9 @@ def main() -> None:
     parser.add_argument("--endpoint-name",   required=True)
     args = parser.parse_args()
 
+    credential = _build_credential()
     ml_client = MLClient(
-        _build_credential(),
+        credential,
         args.subscription_id,
         args.resource_group,
         args.workspace_name,
@@ -102,6 +107,46 @@ def main() -> None:
     )
     ml_client.online_endpoints.begin_create_or_update(endpoint).result()
     print(f"Endpoint ready: {args.endpoint_name}")
+
+    # ── Grant endpoint identity Storage Blob Data Reader ─────────────────────
+    # The storage-initializer sidecar downloads the model from the workspace
+    # storage account using the endpoint's system-assigned managed identity.
+    # With allowSharedKeyAccess=false, SAS-token fallback is blocked, so an
+    # explicit RBAC assignment is required.
+    endpoint_obj = ml_client.online_endpoints.get(args.endpoint_name)
+    endpoint_principal_id = endpoint_obj.identity.principal_id
+    workspace_obj = ml_client.workspaces.get(args.workspace_name)
+    storage_id = workspace_obj.storage_account
+
+    auth_client = AuthorizationManagementClient(credential, args.subscription_id)
+    # Storage Blob Data Reader role definition ID (built-in, stable)
+    _READER_ROLE = "2a2b9908-6ea1-4ae2-8e65-a410df84e7d2"
+    role_def_id = (
+        f"/subscriptions/{args.subscription_id}"
+        f"/providers/Microsoft.Authorization/roleDefinitions/{_READER_ROLE}"
+    )
+    # Deterministic name so re-runs are idempotent
+    assignment_name = str(
+        uuid.uuid5(uuid.NAMESPACE_URL, f"{storage_id}/{endpoint_principal_id}/{_READER_ROLE}")
+    )
+    try:
+        auth_client.role_assignments.create(
+            scope=storage_id,
+            role_assignment_name=assignment_name,
+            parameters=RoleAssignmentCreateParameters(
+                role_definition_id=role_def_id,
+                principal_id=endpoint_principal_id,
+                principal_type="ServicePrincipal",
+            ),
+        )
+        print(f"Granted Storage Blob Data Reader to endpoint identity ({endpoint_principal_id}).")
+        print("Waiting 60s for RBAC propagation...")
+        time.sleep(60)
+    except Exception as rbac_err:  # noqa: BLE001
+        if "RoleAssignmentExists" in str(rbac_err) or "Conflict" in str(rbac_err):
+            print("Storage Blob Data Reader already assigned (idempotent).")
+        else:
+            raise
 
     # ── Deploy latest model version ───────────────────────────────────────────
     model = ml_client.models.get("diabetes-classifier", label="latest")

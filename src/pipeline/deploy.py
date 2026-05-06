@@ -12,13 +12,10 @@ Usage:
 import argparse
 import json
 import os
-import pathlib
 import urllib.request
 
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
-    CodeConfiguration,
-    Environment,
     ManagedOnlineDeployment,
     ManagedOnlineEndpoint,
     ProbeSettings,
@@ -109,36 +106,17 @@ def main() -> None:
     # ── Deploy latest model version ───────────────────────────────────────────
     model = ml_client.models.get("diabetes-classifier", label="latest")
 
-    # Specifying an explicit Environment + CodeConfiguration so AzureML uses our
-    # own score.py instead of the auto-generated mlflow_score_script.py.  The
-    # auto-generated script unconditionally imports azureml.ai.monitoring, which
-    # is never present in a model artifact built by mlflow autolog.  Our score.py
-    # uses mlflow.pyfunc directly and has no such dependency.
-    _code_dir = str(pathlib.Path(__file__).parent)
-    inference_env = Environment(
-        image="mcr.microsoft.com/azureml/openmpi4.1.0-ubuntu20.04:latest",
-        conda_file={
-            "name": "sklearn-mlflow-inference",
-            "channels": ["conda-forge"],
-            "dependencies": [
-                "python=3.10",
-                {"pip": [
-                    "azureml-inference-server-http",
-                    "mlflow==2.16.0",
-                    "scikit-learn==1.4.2",
-                    "pandas>=2.0",
-                    "numpy>=1.26",
-                    "joblib",
-                ]},
-            ],
-        },
-    )
+    # Specifying a curated AzureML environment that includes azureml-ai-monitoring.
+    # Using a curated env (azureml:// reference) avoids any local blob upload —
+    # the image is already registered in the workspace.  Omitting code_configuration
+    # keeps the MLflow no-code deployment path active, which picks up the model's
+    # MLmodel file automatically and routes requests through mlflow_score_script.py.
+    # azureml-ai-monitoring is present in the curated env so that script won't crash.
     deployment = ManagedOnlineDeployment(
         name="blue",
         endpoint_name=args.endpoint_name,
         model=model,
-        environment=inference_env,
-        code_configuration=CodeConfiguration(code=_code_dir, scoring_script="score.py"),
+        environment="azureml://registries/azureml/environments/sklearn-1.5/labels/latest",
         instance_type="Standard_DS3_v2",
         instance_count=1,
         liveness_probe=ProbeSettings(

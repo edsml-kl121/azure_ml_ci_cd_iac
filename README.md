@@ -2,6 +2,8 @@
 
 A minimal end-to-end MLOps example that shows **IaC + CI/CD** using Azure Machine Learning, Bicep, and GitHub Actions.
 
+> **Latest**: deployment now uses a custom `score.py` entry script with the curated sklearn-1.5 environment for reliable inference serving.
+
 The model: binary classification on the sklearn diabetes dataset (high vs. low disease progression).
 
 ---

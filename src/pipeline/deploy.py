@@ -12,12 +12,14 @@ Usage:
 import argparse
 import json
 import os
+import pathlib
 import subprocess
 import time
 import urllib.request
 
 from azure.ai.ml import MLClient
 from azure.ai.ml.entities import (
+    CodeConfiguration,
     ManagedOnlineDeployment,
     ManagedOnlineEndpoint,
     ProbeSettings,
@@ -142,17 +144,18 @@ def main() -> None:
     # ── Deploy latest model version ───────────────────────────────────────────
     model = ml_client.models.get("diabetes-classifier", label="latest")
 
-    # Specifying a curated AzureML environment that includes azureml-ai-monitoring.
-    # Using a curated env (azureml:// reference) avoids any local blob upload —
-    # the image is already registered in the workspace.  Omitting code_configuration
-    # keeps the MLflow no-code deployment path active, which picks up the model's
-    # MLmodel file automatically and routes requests through mlflow_score_script.py.
-    # azureml-ai-monitoring is present in the curated env so that script won't crash.
+    # Use CodeConfiguration with our own score.py so that:
+    # 1. We control the entry script (no dependency on azureml-ai-monitoring)
+    # 2. The curated sklearn-1.5 env provides all inference runtime deps
+    # The SP has Storage Blob Data Contributor (set in cd.yml RBAC step) so
+    # the code asset upload to blob storage will succeed.
+    _code_dir = str(pathlib.Path(__file__).parent)
     deployment = ManagedOnlineDeployment(
         name="blue",
         endpoint_name=args.endpoint_name,
         model=model,
         environment="azureml://registries/azureml/environments/sklearn-1.5/labels/latest",
+        code_configuration=CodeConfiguration(code=_code_dir, scoring_script="score.py"),
         instance_type="Standard_DS3_v2",
         instance_count=1,
         liveness_probe=ProbeSettings(
